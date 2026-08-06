@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SM64CoopDX Text Formatter</title>
+    <style>
+        :root {
+            --bg-color: #1a1a24;
+            --card-bg: #242436;
+            --accent: #4e73df;
+            --text-light: #f8f9fc;
+            --text-muted: #a0a5ba;
+            --border: #383852;
+            --success-green: #2ecc71;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background-color: #14141d;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-light);
+            padding: 12px;
+            font-size: 1rem;
+            resize: vertical;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: 2px solid var(--accent);
+            border-color: transparent;
+        }
+
+        .output-box {
+            position: relative;
+        }
+
+        .output-box textarea {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #0f0f17;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #375a7f;
+        }
+
+        .status-message {
+            color: var(--success-green);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 10px;
+            height: 20px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .status-message.visible {
+            opacity: 1;
+        }
+
+        .note {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            line-height: 1.4;
+        }
+
+        code {
+            background: #14141d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>SM64CoopDX Text Formatter</h1>
+
+    <div class="control-group">
+        <label for="colorPicker">Select Text Color:</label>
+        <div class="color-picker-wrapper">
+            <input type="color" id="colorPicker" value="#FF0000">
+            <span id="hexValue" style="font-family: monospace;">#FF0000</span>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label for="inputText">Input Text (Type <code>&lt;star&gt;</code> for star character):</label>
+        <textarea id="inputText" placeholder="Type your text here... e.g. Hello <star>"></textarea>
+    </div>
+
+    <div class="control-group output-box">
+        <label for="outputText">Formatted Output (SM64CoopDX):</label>
+        <textarea id="outputText" readonly placeholder="Output will appear here..."></textarea>
+        <button class="btn" onclick="copyOutput()">Copy to Clipboard</button>
+        <div id="statusMessage" class="status-message">Copied to clipboard!</div>
+    </div>
+
+    <p class="note">
+        <strong>Tip:</strong> In SM64CoopDX, text colored with hex tags uses the <code>\#RRGGBB\</code> format. The <code>&lt;star&gt;</code> tag converts to code point <code>U+007F</code> (Delete control character), which renders as a star in-game.
+    </p>
+</div>
+
+<script>
+    const colorPicker = document.getElementById('colorPicker');
+    const hexValue = document.getElementById('hexValue');
+    const inputText = document.getElementById('inputText');
+    const outputText = document.getElementById('outputText');
+    const statusMessage = document.getElementById('statusMessage');
+
+    const STAR_CHAR = String.fromCodePoint(0x007F);
+    let hideMessageTimeout = null;
+
+    function updateOutput() {
+        const hexColor = colorPicker.value.toUpperCase();
+        hexValue.textContent = hexColor;
+
+        let rawText = inputText.value;
+
+        if (rawText.trim() === '') {
+            outputText.value = '';
+            return;
+        }
+
+        let processedText = rawText.replace(/<star>/gi, STAR_CHAR);
+
+        outputText.value = `\\#${hexColor.replace('#', '')}\\${processedText}`;
+    }
+
+    colorPicker.addEventListener('input', updateOutput);
+    inputText.addEventListener('input', updateOutput);
+
+    function copyOutput() {
+        if (!outputText.value) return;
+        
+        outputText.select();
+        outputText.setSelectionRange(0, 99999);
+
+        navigator.clipboard.writeText(outputText.value).then(() => {
+            showStatusMessage();
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+
+    function showStatusMessage() {
+        if (hideMessageTimeout) {
+            clearTimeout(hideMessageTimeout);
+        }
+
+        statusMessage.classList.add('visible');
+
+        hideMessageTimeout = setTimeout(() => {
+            statusMessage.classList.remove('visible');
+        }, 2500);
+    }
+</script>
+
+</body>
+</html>
