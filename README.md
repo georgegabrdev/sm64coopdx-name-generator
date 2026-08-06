@@ -33,6 +33,6 @@ A lightweight, web-based tool designed to format text strings for **Super Mario 
 
 ---
 
-## 📄 License
+## License
 
 This project is open-source and free to use for the SM64CoopDX community.
